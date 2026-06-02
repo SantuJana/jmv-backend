@@ -80,6 +80,7 @@ export const createApp = () => {
           deepLinking: true,
           persistAuthorization: true,
           displayRequestDuration: true,
+          validatorUrl: null,
           presets: [
             SwaggerUIBundle.presets.apis,
             SwaggerUIStandalonePreset
