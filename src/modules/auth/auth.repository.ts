@@ -27,7 +27,7 @@ export const authRepository = {
   },
 
   replaceRefreshTokensForUser(data: Prisma.RefreshTokenUncheckedCreateInput) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       await tx.refreshToken.deleteMany({
         where: {
           userId: data.userId

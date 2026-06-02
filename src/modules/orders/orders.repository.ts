@@ -77,7 +77,7 @@ export const ordersRepository = {
     orderNumber: string;
     couponCode?: string;
   }) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       const cart = await tx.cart.findUnique({
         where: { userId: input.userId },
         include: {

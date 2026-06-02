@@ -91,7 +91,7 @@ export const usersRepository = {
   },
 
   createAddress(userId: string, data: Omit<Prisma.AddressUncheckedCreateInput, "userId">) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       if (data.isDefault) {
         await tx.address.updateMany({
           where: { userId },
@@ -109,7 +109,7 @@ export const usersRepository = {
   },
 
   updateAddress(addressId: string, userId: string, data: Prisma.AddressUpdateInput) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       if (data.isDefault === true) {
         await tx.address.updateMany({
           where: {
@@ -130,7 +130,7 @@ export const usersRepository = {
   },
 
   deleteAddress(addressId: string, userId: string) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       const deletedAddress = await tx.address.delete({
         where: { id: addressId }
       });
