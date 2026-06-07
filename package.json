@@ -9,6 +9,7 @@
     "build": "prisma generate && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
+    "test": "echo \"No tests yet\"",
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
     "seed:admin": "prisma generate && tsx scripts/seed-admin.ts",
     "seed:dev": "prisma generate && tsx scripts/seed-dev.ts",
