@@ -65,7 +65,10 @@ jobs:
 
     steps:
       - name: Get current user
-        run: whoami
+        run: |
+          Write-Host "========== CURRENT USER =========="
+          whoami
+          Write-Host "=================================="
 
       - name: Ensure Docker is running
         run: |
