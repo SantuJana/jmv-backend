@@ -4,9 +4,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY tsconfig.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
 COPY src ./src
 RUN npm run build
-RUN npm ci --omit=dev
+RUN npm prune --omit=dev
 
 # ── Stage 2: production ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
