@@ -2,7 +2,6 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import swaggerUi from "swagger-ui-express";
 
 import { env } from "@/config/env";
 import { swaggerSpec } from "@/config/swagger";
@@ -21,9 +20,10 @@ export const createApp = () => {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:"]
+          scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+          connectSrc: ["'self'", "https://cdn.jsdelivr.net"],
+          imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"]
         }
       }
     })
@@ -55,24 +55,46 @@ export const createApp = () => {
     })
   );
 
-  const swaggerUiOptions = {
-    explorer: true,
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayRequestDuration: true
-    },
-    customSiteTitle: "JMV Grocery API Docs"
-  };
-
   app.get("/api-docs.json", (_req, res) => {
     res.status(200).json(swaggerSpec);
   });
 
-  app.use(
-    "/api-docs",
-    swaggerUi.serveFiles(swaggerSpec, swaggerUiOptions),
-    swaggerUi.setup(swaggerSpec, swaggerUiOptions)
-  );
+  app.get("/api-docs", (_req, res) => {
+    res.type("html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JMV Grocery API Docs</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.6/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.6/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.6/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.onload = function () {
+        window.ui = SwaggerUIBundle({
+          url: "/api-docs.json",
+          dom_id: "#swagger-ui",
+          deepLinking: true,
+          persistAuthorization: true,
+          displayRequestDuration: true,
+          validatorUrl: null,
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+          ],
+          plugins: [
+            SwaggerUIBundle.plugins.DownloadUrl
+          ],
+          layout: "StandaloneLayout"
+        });
+      };
+    </script>
+  </body>
+</html>`);
+  });
 
   app.use(compression());
   app.use(express.json({ limit: "1mb" }));
@@ -99,3 +121,5 @@ export const createApp = () => {
 
   return app;
 };
+
+export default createApp;
