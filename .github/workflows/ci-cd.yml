@@ -70,7 +70,7 @@ jobs:
           docker ps
           if ($LASTEXITCODE -ne 0) {
             Write-Host "Docker daemon not responding, attempting to start Docker Desktop..."
-            Start-Process "C:\Program Files\Docker\Docker\Docker.exe"
+            Start-Process "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
             Start-Sleep -Seconds 15
             docker ps
           }
