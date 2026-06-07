@@ -64,6 +64,17 @@ jobs:
       DOCKER_CONFIG: D:\JVM-SERVER\.docker
 
     steps:
+      - name: Ensure Docker is running
+        run: |
+          # Check if Docker daemon is accessible
+          docker ps
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Docker daemon not responding, attempting to start Docker Desktop..."
+            Start-Process "C:\Program Files\Docker\Docker\Docker.exe"
+            Start-Sleep -Seconds 15
+            docker ps
+          }
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
