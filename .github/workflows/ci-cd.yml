@@ -1,6 +1,7 @@
 name: CI/CD — API
 
 on:
+  workflow_dispatch:
   push:
     branches: [production]
   pull_request:
