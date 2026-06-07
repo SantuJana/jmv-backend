@@ -72,24 +72,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path $env:DOCKER_CONFIG | Out-Null
           $token = $env:DOCKERHUB_TOKEN.Trim()
-          $process = New-Object System.Diagnostics.Process
-          $process.StartInfo.FileName = "docker"
-          $process.StartInfo.Arguments = "login --username $env:DOCKERHUB_USERNAME --password-stdin"
-          $process.StartInfo.UseShellExecute = $false
-          $process.StartInfo.RedirectStandardInput = $true
-          $process.StartInfo.RedirectStandardOutput = $true
-          $process.StartInfo.RedirectStandardError = $true
-
-          $process.Start() | Out-Null
-          $process.StandardInput.Write($token)
-          $process.StandardInput.Close()
-          $process.WaitForExit()
-
-          $process.StandardOutput.ReadToEnd()
-          $errorOutput = $process.StandardError.ReadToEnd()
-          if ($process.ExitCode -ne 0) {
-            Write-Error $errorOutput
-            exit $process.ExitCode
+          $username = $env:DOCKERHUB_USERNAME.Trim()
+    
+          # Use echo to pipe the token directly to docker login
+          $token | docker login --username $username --password-stdin
+    
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Docker login failed"
+            exit $LASTEXITCODE
           }
 
       - name: Pull new image
