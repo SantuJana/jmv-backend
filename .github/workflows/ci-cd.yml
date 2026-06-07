@@ -64,8 +64,8 @@ jobs:
     steps:
       - name: Set PowerShell execution policy
         shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-        
+        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
