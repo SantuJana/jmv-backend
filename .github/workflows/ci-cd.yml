@@ -72,7 +72,25 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path $env:DOCKER_CONFIG | Out-Null
           $token = $env:DOCKERHUB_TOKEN.Trim()
-          $token | docker login --username $env:DOCKERHUB_USERNAME --password-stdin
+          $process = New-Object System.Diagnostics.Process
+          $process.StartInfo.FileName = "docker"
+          $process.StartInfo.Arguments = "login --username $env:DOCKERHUB_USERNAME --password-stdin"
+          $process.StartInfo.UseShellExecute = $false
+          $process.StartInfo.RedirectStandardInput = $true
+          $process.StartInfo.RedirectStandardOutput = $true
+          $process.StartInfo.RedirectStandardError = $true
+
+          $process.Start() | Out-Null
+          $process.StandardInput.Write($token)
+          $process.StandardInput.Close()
+          $process.WaitForExit()
+
+          $process.StandardOutput.ReadToEnd()
+          $errorOutput = $process.StandardError.ReadToEnd()
+          if ($process.ExitCode -ne 0) {
+            Write-Error $errorOutput
+            exit $process.ExitCode
+          }
 
       - name: Pull new image
         working-directory: D:\JVM-SERVER
