@@ -60,18 +60,19 @@ jobs:
     runs-on: self-hosted
     needs: build
     if: github.ref == 'refs/heads/production'
+    env:
+      DOCKER_CONFIG: D:\JVM-SERVER\.docker
 
     steps:
-      - name: Set PowerShell execution policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force
-
       - name: Log in to Docker Hub
         shell: powershell
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
-          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
-          $token | docker login -u $username --password-stdin
+          New-Item -ItemType Directory -Force -Path $env:DOCKER_CONFIG | Out-Null
+          $token = $env:DOCKERHUB_TOKEN.Trim()
+          $token | docker login --username $env:DOCKERHUB_USERNAME --password-stdin
 
       - name: Pull new image
         working-directory: D:\JVM-SERVER
