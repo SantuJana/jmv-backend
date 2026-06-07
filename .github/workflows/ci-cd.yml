@@ -67,10 +67,11 @@ jobs:
         run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: powershell
+        run: |
+          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
+          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
+          $token | docker login -u $username --password-stdin
 
       - name: Pull new image
         working-directory: D:\JVM-SERVER
