@@ -71,11 +71,11 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Force -Path $env:DOCKER_CONFIG | Out-Null
-          $token = $env:DOCKERHUB_TOKEN.Trim()
-          $username = $env:DOCKERHUB_USERNAME.Trim()
     
-          # Use echo to pipe the token directly to docker login
-          $token | docker login --username $username --password-stdin
+          # Use ConvertTo-SecureString and pipe securely to docker login
+          $token = $env:DOCKERHUB_TOKEN | ConvertTo-SecureString -AsPlainText -Force
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($env:DOCKERHUB_TOKEN)
+          $token | Out-String -NoNewline | docker login --username $env:DOCKERHUB_USERNAME --password-stdin
     
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Docker login failed"
