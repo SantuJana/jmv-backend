@@ -29,6 +29,13 @@ export const usersRepository = {
     });
   },
 
+  updateUserById(userId: string, data: Prisma.UserUpdateInput) {
+    return prisma.user.update({
+      where: { id: userId },
+      data
+    });
+  },
+
   findUserDetails(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },

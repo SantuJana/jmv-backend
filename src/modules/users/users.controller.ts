@@ -53,6 +53,17 @@ export const usersController = {
     );
   }) as RequestHandler,
 
+  updateProfile: asyncHandler(async (req, res) => {
+    const user = await usersService.updateProfile(getUserId(req), req.body);
+
+    res.status(200).json(
+      buildApiResponse({
+        message: "Profile updated successfully",
+        data: { user }
+      })
+    );
+  }) as RequestHandler,
+
   listAddresses: asyncHandler(async (req, res) => {
     const addresses = await usersService.listAddresses(getUserId(req));
 
