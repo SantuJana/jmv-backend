@@ -12,7 +12,8 @@ import {
   listUsersSchema,
   updateAddressSchema,
   updateUserStatusSchema,
-  userParamsSchema
+  userParamsSchema,
+  updateProfileSchema
 } from "./users.validation";
 
 export const usersRouter = Router();
@@ -143,6 +144,42 @@ usersRouter.patch(
   validate(updateUserStatusSchema),
   usersController.updateUserStatus
 );
+
+/**
+ * @swagger
+ * /users/me:
+ *   patch:
+ *     summary: Update my profile
+ *     description: Update profile details for the authenticated user.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Authentication token is required
+ *       409:
+ *         description: Email or phone already in use
+ */
+usersRouter.patch("/me", validate(updateProfileSchema), usersController.updateProfile);
 
 /**
  * @swagger

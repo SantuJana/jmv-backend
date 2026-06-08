@@ -75,3 +75,17 @@ export type CreateAddressInput = z.infer<typeof createAddressSchema>["body"];
 export type UpdateAddressInput = z.infer<typeof updateAddressSchema>["body"];
 export type ListUsersQuery = z.infer<typeof listUsersSchema>["query"];
 export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>["body"];
+
+export const updateProfileSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(2).max(100).optional(),
+    email: z.string().trim().email().max(100).optional(),
+    phone: z.string().trim().min(7).max(20).optional()
+  }).refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field must be provided to update"
+  }),
+  query: z.object({}).optional(),
+  params: z.object({}).optional()
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>["body"];

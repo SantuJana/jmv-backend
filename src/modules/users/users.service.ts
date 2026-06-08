@@ -4,11 +4,13 @@ import { AppError } from "@/utils/app-error";
 import { normalizePagination } from "@/utils/pagination";
 
 import { usersRepository } from "./users.repository";
+import { authRepository } from "../auth/auth.repository";
 import type {
   CreateAddressInput,
   ListUsersQuery,
   UpdateAddressInput,
-  UpdateUserStatusInput
+  UpdateUserStatusInput,
+  UpdateProfileInput
 } from "./users.validation";
 
 const toAddressResponse = (address: {
@@ -149,6 +151,44 @@ export const usersService = {
         total,
         totalPages: Math.ceil(total / pagination.limit)
       }
+    };
+  },
+
+  async updateProfile(userId: string, input: UpdateProfileInput) {
+    const user = await usersRepository.findUserById(userId);
+
+    if (!user || user.deletedAt) {
+      throw new AppError("User not found", 404);
+    }
+
+    if (input.email && input.email !== user.email) {
+      const existingUser = await authRepository.findUserByEmail(input.email);
+      if (existingUser) {
+        throw new AppError("An account with this email already exists", 409);
+      }
+    }
+
+    if (input.phone && input.phone !== user.phone) {
+      const existingPhone = await authRepository.findUserByPhone(input.phone);
+      if (existingPhone) {
+        throw new AppError("An account with this phone number already exists", 409);
+      }
+    }
+
+    const updatedUser = await usersRepository.updateUserById(userId, {
+      name: input.name,
+      email: input.email,
+      phone: input.phone
+    });
+
+    return {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+      status: updatedUser.status,
+      createdAt: updatedUser.createdAt
     };
   },
 
