@@ -12,13 +12,20 @@ const moneySchema = z
   .trim()
   .regex(/^\d+(?:\.\d{1,2})?$/, "Amount must be a valid decimal with up to two places");
 
-const variantBodySchema = z.object({
+const variantFieldsSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  price: moneySchema,
+  mrp: moneySchema.optional(),
+  price: moneySchema.optional(),
+  offerPrice: moneySchema.optional(),
   stock: z.number().int().min(0).optional(),
   sku: z.string().trim().min(2).max(80),
   unit: z.string().trim().min(1).max(40),
   isActive: z.boolean().optional()
+});
+
+const variantBodySchema = variantFieldsSchema.refine((value) => value.price || value.offerPrice, {
+  message: "Offer price is required",
+  path: ["offerPrice"]
 });
 
 const productBodySchema = z.object({
@@ -90,7 +97,7 @@ export const createVariantSchema = z.object({
 });
 
 export const updateVariantSchema = z.object({
-  body: variantBodySchema.partial().refine((value) => Object.keys(value).length > 0, {
+  body: variantFieldsSchema.partial().refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required"
   }),
   query: z.object({}).optional(),

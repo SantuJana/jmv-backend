@@ -31,7 +31,9 @@ const toOrderResponse = (order: OrderWithDetails) => ({
     sku: item.sku,
     unit: item.unit,
     quantity: item.quantity,
+    mrp: toMoneyString(item.mrp),
     unitPrice: toMoneyString(item.unitPrice),
+    offerPrice: toMoneyString(item.unitPrice),
     total: toMoneyString(item.total),
     createdAt: item.createdAt
   })),
@@ -65,6 +67,10 @@ const toOrderError = (error: unknown) => {
 
   if (error.message === "COUPON_USAGE_LIMIT_REACHED") {
     return new AppError("Coupon usage limit reached", 409);
+  }
+
+  if (error.message === "COUPON_NOT_FOUND") {
+    return new AppError("Coupon not found", 404);
   }
 
   return error;
