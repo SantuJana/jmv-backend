@@ -38,6 +38,17 @@ const ensureSkuIsUnique = async (sku: string, currentVariantId?: string) => {
   }
 };
 
+const getVariantOfferPrice = (variant: { price?: string; offerPrice?: string }) => variant.offerPrice ?? variant.price;
+
+const getVariantMrp = (variant: { mrp?: string; price?: string; offerPrice?: string }) =>
+  variant.mrp ?? variant.offerPrice ?? variant.price;
+
+const ensureOfferPriceDoesNotExceedMrp = (mrp: string, offerPrice: string) => {
+  if (Number(offerPrice) > Number(mrp)) {
+    throw new AppError("Offer price cannot be greater than MRP", 422);
+  }
+};
+
 const ensureCategoryExists = async (categoryId: string) => {
   const category = await productsRepository.findCategoryById(categoryId);
 
@@ -49,6 +60,7 @@ const ensureCategoryExists = async (categoryId: string) => {
 const toVariantResponse = (variant: {
   id: string;
   name: string;
+  mrp: { toString: () => string };
   price: { toString: () => string };
   stock: number;
   sku: string;
@@ -59,7 +71,9 @@ const toVariantResponse = (variant: {
 }) => ({
   id: variant.id,
   name: variant.name,
+  mrp: variant.mrp.toString(),
   price: variant.price.toString(),
+  offerPrice: variant.price.toString(),
   stock: variant.stock,
   sku: variant.sku,
   unit: variant.unit,
@@ -262,6 +276,7 @@ export const productsService = {
 
     for (const variant of input.variants ?? []) {
       await ensureSkuIsUnique(variant.sku);
+      ensureOfferPriceDoesNotExceedMrp(getVariantMrp(variant)!, getVariantOfferPrice(variant)!);
     }
 
     const product = await productsRepository.create({
@@ -280,7 +295,8 @@ export const productsService = {
         ? {
             create: input.variants.map((variant) => ({
               name: variant.name,
-              price: variant.price,
+              mrp: getVariantMrp(variant)!,
+              price: getVariantOfferPrice(variant)!,
               stock: variant.stock ?? 0,
               sku: variant.sku,
               unit: variant.unit,
@@ -352,6 +368,8 @@ export const productsService = {
 
     await ensureSkuIsUnique(input.sku);
 
+    ensureOfferPriceDoesNotExceedMrp(getVariantMrp(input)!, getVariantOfferPrice(input)!);
+
     const variant = await productsRepository.createVariant({
       product: {
         connect: {
@@ -359,7 +377,8 @@ export const productsService = {
         }
       },
       name: input.name,
-      price: input.price,
+      mrp: getVariantMrp(input)!,
+      price: getVariantOfferPrice(input)!,
       stock: input.stock ?? 0,
       sku: input.sku,
       unit: input.unit,
@@ -380,9 +399,14 @@ export const productsService = {
       await ensureSkuIsUnique(input.sku, variantId);
     }
 
+    const nextMrp = input.mrp ?? variant.mrp.toString();
+    const nextOfferPrice = getVariantOfferPrice(input) ?? variant.price.toString();
+    ensureOfferPriceDoesNotExceedMrp(nextMrp, nextOfferPrice);
+
     const updatedVariant = await productsRepository.updateVariant(variantId, {
       name: input.name,
-      price: input.price,
+      mrp: input.mrp,
+      price: getVariantOfferPrice(input),
       stock: input.stock,
       sku: input.sku,
       unit: input.unit,

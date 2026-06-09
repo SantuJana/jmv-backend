@@ -589,6 +589,7 @@ const seedOrders = async () => {
         throw new Error(`Variant ${item.sku} was not found`);
       }
 
+      const mrp = Number(variant.mrp ?? variant.price);
       const unitPrice = Number(variant.price);
 
       orderItems.push({
@@ -598,6 +599,7 @@ const seedOrders = async () => {
         sku: variant.sku,
         unit: variant.unit,
         quantity: item.quantity,
+        mrp: mrp.toFixed(2),
         unitPrice: unitPrice.toFixed(2),
         total: (unitPrice * item.quantity).toFixed(2)
       });

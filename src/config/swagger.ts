@@ -314,9 +314,18 @@ const options = {
               type: "string",
               example: "1 kg"
             },
-            price: {
+            mrp: {
               type: "string",
               example: "120.00"
+            },
+            price: {
+              type: "string",
+              description: "Selling price. Same value as offerPrice for backwards compatibility.",
+              example: "99.00"
+            },
+            offerPrice: {
+              type: "string",
+              example: "99.00"
             },
             stock: {
               type: "integer",
@@ -454,11 +463,12 @@ const options = {
             },
             unitPrice: {
               type: "string",
-              example: "120.00"
+              description: "Selling price per unit. Same value as offerPrice.",
+              example: "99.00"
             },
             lineTotal: {
               type: "string",
-              example: "240.00"
+              example: "198.00"
             },
             variant: {
               type: "object",
@@ -470,6 +480,19 @@ const options = {
                 name: {
                   type: "string",
                   example: "1 kg"
+                },
+                mrp: {
+                  type: "string",
+                  example: "120.00"
+                },
+                price: {
+                  type: "string",
+                  description: "Selling price. Same value as offerPrice for backwards compatibility.",
+                  example: "99.00"
+                },
+                offerPrice: {
+                  type: "string",
+                  example: "99.00"
                 },
                 sku: {
                   type: "string",
@@ -710,13 +733,22 @@ const options = {
                     type: "integer",
                     example: 2
                   },
-                  unitPrice: {
+                  mrp: {
                     type: "string",
                     example: "120.00"
                   },
+                  unitPrice: {
+                    type: "string",
+                    description: "Selling price snapshot per unit. Same value as offerPrice.",
+                    example: "99.00"
+                  },
+                  offerPrice: {
+                    type: "string",
+                    example: "99.00"
+                  },
                   total: {
                     type: "string",
-                    example: "240.00"
+                    example: "198.00"
                   }
                 }
               }

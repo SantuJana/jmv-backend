@@ -125,6 +125,7 @@ export const ordersRepository = {
           throw new Error("INSUFFICIENT_STOCK");
         }
 
+        const mrp = Number(variant.mrp ?? variant.price);
         const unitPrice = Number(variant.price);
         const lineTotal = unitPrice * item.quantity;
         subtotal += lineTotal;
@@ -136,6 +137,7 @@ export const ordersRepository = {
           sku: variant.sku,
           unit: variant.unit,
           quantity: item.quantity,
+          mrp: mrp.toFixed(2),
           unitPrice: unitPrice.toFixed(2),
           total: lineTotal.toFixed(2)
         });

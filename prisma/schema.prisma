@@ -197,6 +197,7 @@ model ProductVariant {
   id          String      @id @default(uuid()) @db.Uuid
   productId   String      @map("product_id") @db.Uuid
   name        String
+  mrp         Decimal     @db.Decimal(10, 2)
   price       Decimal     @db.Decimal(10, 2)
   stock       Int         @default(0)
   sku         String      @unique
@@ -277,6 +278,7 @@ model OrderItem {
   sku         String
   unit        String
   quantity    Int
+  mrp         Decimal        @db.Decimal(10, 2)
   unitPrice   Decimal        @map("unit_price") @db.Decimal(10, 2)
   total       Decimal        @db.Decimal(10, 2)
   createdAt   DateTime       @default(now()) @map("created_at")

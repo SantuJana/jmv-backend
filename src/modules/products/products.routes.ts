@@ -186,16 +186,20 @@ productsRouter.get("/:idOrSlug", validate(getProductSchema), productsController.
  *                   type: object
  *                   required:
  *                     - name
- *                     - price
+ *                     - mrp
+ *                     - offerPrice
  *                     - sku
  *                     - unit
  *                   properties:
  *                     name:
  *                       type: string
  *                       example: 1 kg
- *                     price:
+ *                     mrp:
  *                       type: string
  *                       example: "120.00"
+ *                     offerPrice:
+ *                       type: string
+ *                       example: "99.00"
  *                     stock:
  *                       type: integer
  *                       example: 25
@@ -333,16 +337,20 @@ productsRouter.delete("/:id", ...adminOnly, validate(deleteProductSchema), produ
  *             type: object
  *             required:
  *               - name
- *               - price
+ *               - mrp
+ *               - offerPrice
  *               - sku
  *               - unit
  *             properties:
  *               name:
  *                 type: string
  *                 example: 500 g
- *               price:
+ *               mrp:
  *                 type: string
  *                 example: "65.00"
+ *               offerPrice:
+ *                 type: string
+ *                 example: "59.00"
  *               stock:
  *                 type: integer
  *                 example: 40
@@ -375,7 +383,7 @@ productsRouter.post("/:productId/variants", ...adminOnly, validate(createVariant
  * /products/variants/{variantId}:
  *   patch:
  *     summary: Update product variant
- *     description: Update variant price, stock, SKU, unit, or active state. Requires an admin bearer token.
+ *     description: Update variant MRP, offer price, stock, SKU, unit, or active state. Requires an admin bearer token.
  *     tags:
  *       - Products
  *     security:
@@ -396,9 +404,12 @@ productsRouter.post("/:productId/variants", ...adminOnly, validate(createVariant
  *             properties:
  *               name:
  *                 type: string
- *               price:
+ *               mrp:
  *                 type: string
  *                 example: "70.00"
+ *               offerPrice:
+ *                 type: string
+ *                 example: "65.00"
  *               stock:
  *                 type: integer
  *               sku:

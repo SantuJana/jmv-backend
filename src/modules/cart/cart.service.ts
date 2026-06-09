@@ -30,6 +30,9 @@ const toCartResponse = (cart: CartWithItems | null) => {
       variant: {
         id: item.variant.id,
         name: item.variant.name,
+        mrp: item.variant.mrp.toString(),
+        price: item.variant.price.toString(),
+        offerPrice: item.variant.price.toString(),
         sku: item.variant.sku,
         unit: item.variant.unit,
         stock: item.variant.stock,
