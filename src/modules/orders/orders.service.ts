@@ -35,7 +35,8 @@ const toOrderResponse = (order: OrderWithDetails) => ({
     unitPrice: toMoneyString(item.unitPrice),
     offerPrice: toMoneyString(item.unitPrice),
     total: toMoneyString(item.total),
-    createdAt: item.createdAt
+    createdAt: item.createdAt,
+    product: item.variant.product
   })),
   createdAt: order.createdAt,
   updatedAt: order.updatedAt

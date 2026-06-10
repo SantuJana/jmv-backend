@@ -19,7 +19,23 @@ const orderInclude = {
         select: {
           id: true,
           stock: true,
-          isActive: true
+          isActive: true,
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              imageUrl: true,
+              isActive: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true
+                }
+              }
+            }
+          }
         }
       }
     }

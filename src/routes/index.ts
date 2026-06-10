@@ -12,6 +12,7 @@ import { paymentsRouter } from "@/modules/payments/payments.routes";
 import { productsRouter } from "@/modules/products/products.routes";
 import { uploadsRouter } from "@/modules/uploads/uploads.routes";
 import { usersRouter } from "@/modules/users/users.routes";
+import { wishlistRouter } from "@/modules/wishlist/wishlist.routes";
 import { buildApiResponse } from "@/utils/api-response";
 
 export const apiRouter = Router();
@@ -32,3 +33,4 @@ apiRouter.use("/payments", paymentsRouter);
 apiRouter.use("/uploads", uploadsRouter);
 apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/inventory", inventoryRouter);
+apiRouter.use("/wishlist", wishlistRouter);
