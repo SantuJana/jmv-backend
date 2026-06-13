@@ -4,6 +4,7 @@ import { normalizePagination } from "@/utils/pagination";
 
 import { ordersRepository, type OrderWithDetails } from "./orders.repository";
 import type { CreateOrderInput, ListOrdersQuery, UpdateOrderStatusInput } from "./orders.validation";
+import { notificationsService } from "../notifications/notifications.service";
 
 const toMoneyString = (amount: { toString: () => string }) => amount.toString();
 
@@ -174,6 +175,48 @@ export const ordersService = {
       status: input.status,
       paymentStatus: input.paymentStatus
     });
+
+    if (input.status && input.status !== order.status) {
+      const statusConfigs: Record<string, { title: string; message: string; imageUrl: string }> = {
+        CONFIRMED: {
+          title: "Order Confirmed! 🎉",
+          message: `Your order #${order.orderNumber.slice(-8)} has been confirmed!`,
+          imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80",
+        },
+        PACKED: {
+          title: "Order Packed & Ready! 📦",
+          message: "Your items have been carefully packed and are ready to ship.",
+          imageUrl: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80",
+        },
+        OUT_FOR_DELIVERY: {
+          title: "Out for Delivery! 🛵",
+          message: "Our delivery partner is on their way to your address.",
+          imageUrl: "https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?auto=format&fit=crop&w=600&q=80",
+        },
+        DELIVERED: {
+          title: "Delivered! 🛍️",
+          message: "Your package has been successfully delivered. Thank you for shopping with JMV!",
+          imageUrl: "https://images.unsplash.com/photo-1620455212530-ebec009f3336?auto=format&fit=crop&w=600&q=80",
+        },
+        CANCELLED: {
+          title: "Order Cancelled ⚠️",
+          message: `Your order #${order.orderNumber.slice(-8)} has been cancelled.`,
+          imageUrl: "https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&w=600&q=80",
+        },
+      };
+
+      const config = statusConfigs[input.status];
+      if (config) {
+        // Send asynchronously without blocking the response
+        notificationsService.sendPushNotification(
+          order.userId,
+          config.title,
+          config.message,
+          { orderId: order.id },
+          config.imageUrl
+        ).catch((err) => console.error("Failed to send push notification:", err));
+      }
+    }
 
     return toOrderResponse(updatedOrder);
   }
