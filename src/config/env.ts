@@ -15,9 +15,11 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  CLOUDINARY_API_KEY: z.string().optional(),
-  CLOUDINARY_API_SECRET: z.string().optional()
+  MINIO_ENDPOINT: z.string().url().optional(),
+  MINIO_REGION: z.string().default("us-east-1"),
+  MINIO_BUCKET: z.string().optional(),
+  MINIO_ACCESS_KEY: z.string().optional(),
+  MINIO_SECRET_KEY: z.string().optional()
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

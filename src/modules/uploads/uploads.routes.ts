@@ -11,12 +11,14 @@ import { deleteImageSchema, uploadImageSchema } from "./uploads.validation";
 
 export const uploadsRouter = Router();
 
+uploadsRouter.get("/image/*", uploadsController.getImage);
+
 /**
  * @swagger
  * /uploads/image:
  *   post:
  *     summary: Upload image
- *     description: Upload an image to Cloudinary. Requires an admin bearer token.
+ *     description: Upload an image to S3-compatible MinIO object storage. Requires an admin bearer token.
  *     tags:
  *       - Uploads
  *     security:
@@ -60,7 +62,7 @@ export const uploadsRouter = Router();
  *       422:
  *         description: Validation failed or invalid image
  *       503:
- *         description: Cloudinary is not configured
+ *         description: MinIO object storage is not configured
  */
 uploadsRouter.post(
   "/image",
@@ -76,7 +78,7 @@ uploadsRouter.post(
  * /uploads/image:
  *   delete:
  *     summary: Delete image
- *     description: Delete an image from Cloudinary by public ID. Requires an admin bearer token.
+ *     description: Delete an image from S3-compatible MinIO object storage by object key. Requires an admin bearer token.
  *     tags:
  *       - Uploads
  *     security:
@@ -103,7 +105,7 @@ uploadsRouter.post(
  *       422:
  *         description: Validation failed
  *       503:
- *         description: Cloudinary is not configured
+ *         description: MinIO object storage is not configured
  */
 uploadsRouter.delete(
   "/image",

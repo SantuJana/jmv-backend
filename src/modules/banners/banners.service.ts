@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/utils/app-error";
-import { buildImageUrls } from "@/utils/cloudinary-image";
+import { buildImageUrls, buildObjectStorageImageUrl } from "@/utils/object-storage-image";
 import { normalizePagination } from "@/utils/pagination";
 
 import { bannersRepository } from "./banners.repository";
@@ -31,9 +31,9 @@ const toBannerResponse = (banner: {
   id: banner.id,
   title: banner.title,
   subtitle: banner.subtitle,
-  imageUrl: banner.imageUrl,
+  imageUrl: buildObjectStorageImageUrl(banner.imageUrl, banner.imagePublicId),
   imagePublicId: banner.imagePublicId,
-  imageUrls: buildImageUrls(banner.imageUrl),
+  imageUrls: buildImageUrls(banner.imageUrl, banner.imagePublicId),
   ctaLabel: banner.ctaLabel,
   ctaUrl: banner.ctaUrl,
   sortOrder: banner.sortOrder,

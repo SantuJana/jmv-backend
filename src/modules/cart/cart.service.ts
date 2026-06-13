@@ -1,5 +1,5 @@
 import { AppError } from "@/utils/app-error";
-import { buildImageUrls } from "@/utils/cloudinary-image";
+import { buildImageUrls, buildObjectStorageImageUrl } from "@/utils/object-storage-image";
 
 import { cartRepository, type CartWithItems } from "./cart.repository";
 import type { AddCartItemInput, UpdateCartItemInput } from "./cart.validation";
@@ -42,8 +42,8 @@ const toCartResponse = (cart: CartWithItems | null) => {
         id: item.variant.product.id,
         name: item.variant.product.name,
         slug: item.variant.product.slug,
-        imageUrl: item.variant.product.imageUrl,
-        imageUrls: buildImageUrls(item.variant.product.imageUrl),
+        imageUrl: buildObjectStorageImageUrl(item.variant.product.imageUrl, item.variant.product.imagePublicId),
+        imageUrls: buildImageUrls(item.variant.product.imageUrl, item.variant.product.imagePublicId),
         isActive: item.variant.product.isActive
       },
       category: {

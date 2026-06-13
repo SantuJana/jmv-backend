@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/utils/app-error";
-import { buildImageUrls } from "@/utils/cloudinary-image";
+import { buildImageUrls, buildObjectStorageImageUrl } from "@/utils/object-storage-image";
 import { normalizePagination } from "@/utils/pagination";
 
 import { categoriesRepository } from "./categories.repository";
@@ -39,9 +39,9 @@ const toCategoryResponse = (category: {
   id: category.id,
   name: category.name,
   slug: category.slug,
-  imageUrl: category.imageUrl,
+  imageUrl: buildObjectStorageImageUrl(category.imageUrl, category.imagePublicId),
   imagePublicId: category.imagePublicId,
-  imageUrls: buildImageUrls(category.imageUrl),
+  imageUrls: buildImageUrls(category.imageUrl, category.imagePublicId),
   isActive: category.isActive,
   productsCount: category._count?.products ?? 0,
   createdAt: category.createdAt,

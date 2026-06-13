@@ -12,6 +12,17 @@ npm run dev
 
 The API starts on `http://localhost:5000` by default.
 
+## Object Storage
+
+Image uploads use S3-compatible MinIO object storage. Configure these values in `.env`:
+
+- `MINIO_ENDPOINT` - internal S3 endpoint, for example `http://localhost:9000`
+- `MINIO_REGION` - signing region; defaults to `us-east-1`
+- `MINIO_BUCKET` - bucket where images are stored
+- `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY` - MinIO credentials with object upload/delete access
+
+Uploaded image responses keep the existing `imageUrl` and `imagePublicId` fields. `imagePublicId` is now the MinIO object key used for deletion, and `imageUrl` points to the backend proxy at `${API_BASE_URL}${API_PREFIX}/uploads/image/{objectKey}`.
+
 ## Scripts
 
 - `npm run dev` - start the development server
