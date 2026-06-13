@@ -89,7 +89,7 @@ export const wishlistRepository = {
           }
         }
       });
-    } catch (e) {
+    } catch {
       // Record not found
       return null;
     }
