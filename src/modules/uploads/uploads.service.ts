@@ -1,9 +1,10 @@
 import { createHash, createHmac, randomUUID } from "crypto";
 import path from "path";
+import sharp from "sharp";
 
 import { env } from "@/config/env";
 import { AppError } from "@/utils/app-error";
-import { buildProxyImageUrl } from "@/utils/object-storage-image";
+import { buildImageVariantKey, buildProxyImageUrl } from "@/utils/object-storage-image";
 
 import type { DeleteImageInput, UploadImageInput } from "./uploads.validation";
 
@@ -83,6 +84,8 @@ const getFileExtension = (file: Express.Multer.File) => {
 
   return mimeExtensions[file.mimetype] ?? "";
 };
+
+const getUploadContentType = (file: Express.Multer.File) => file.mimetype || "application/octet-stream";
 
 const buildObjectKey = (folder: string, file: Express.Multer.File) => {
   const safeFolder = normalizeFolder(folder);
@@ -165,24 +168,68 @@ const readStorageError = async (response: Response, fallbackMessage: string) => 
   return new AppError(errorMessage ?? fallbackMessage, response.status >= 500 ? response.status : 502, detail || undefined);
 };
 
-const uploadBuffer = async (config: MinioConfig, objectKey: string, file: Express.Multer.File) => {
+const uploadBuffer = async (config: MinioConfig, objectKey: string, buffer: Buffer, contentType: string) => {
   const signedRequest = signS3Request({
     config,
     method: "PUT",
     objectKey,
-    contentType: file.mimetype,
-    payloadHash: hash(file.buffer)
+    contentType,
+    payloadHash: hash(buffer)
   });
 
   const response = await fetch(signedRequest.url, {
     method: "PUT",
     headers: signedRequest.headers,
-    body: file.buffer
+    body: buffer
   });
 
   if (!response.ok) {
     throw await readStorageError(response, "Image upload failed");
   }
+};
+
+const buildOptimizedVariants = async (buffer: Buffer) => ({
+  thumbnail: await sharp(buffer)
+    .rotate()
+    .resize({
+      width: 320,
+      height: 320,
+      fit: "inside",
+      withoutEnlargement: true
+    })
+    .webp({ quality: 72 })
+    .toBuffer(),
+  card: await sharp(buffer)
+    .rotate()
+    .resize({
+      width: 800,
+      height: 800,
+      fit: "inside",
+      withoutEnlargement: true
+    })
+    .webp({ quality: 78 })
+    .toBuffer(),
+  detail: await sharp(buffer)
+    .rotate()
+    .resize({
+      width: 1200,
+      height: 1200,
+      fit: "inside",
+      withoutEnlargement: true
+    })
+    .webp({ quality: 82 })
+    .toBuffer()
+});
+
+const uploadImageSet = async (config: MinioConfig, objectKey: string, file: Express.Multer.File) => {
+  const variants = await buildOptimizedVariants(file.buffer);
+
+  await Promise.all([
+    uploadBuffer(config, objectKey, file.buffer, getUploadContentType(file)),
+    uploadBuffer(config, buildImageVariantKey(objectKey, "thumbnail"), variants.thumbnail, "image/webp"),
+    uploadBuffer(config, buildImageVariantKey(objectKey, "card"), variants.card, "image/webp"),
+    uploadBuffer(config, buildImageVariantKey(objectKey, "detail"), variants.detail, "image/webp")
+  ]);
 };
 
 const fetchObject = async (config: MinioConfig, objectKey: string) => {
@@ -211,6 +258,31 @@ const fetchObject = async (config: MinioConfig, objectKey: string) => {
   };
 };
 
+const deleteImageSet = async (config: MinioConfig, publicId: string) => {
+  await Promise.all([
+    publicId,
+    buildImageVariantKey(publicId, "thumbnail"),
+    buildImageVariantKey(publicId, "card"),
+    buildImageVariantKey(publicId, "detail")
+  ].map(async (objectKey) => {
+    const signedRequest = signS3Request({
+      config,
+      method: "DELETE",
+      objectKey,
+      payloadHash: hash("")
+    });
+
+    const response = await fetch(signedRequest.url, {
+      method: "DELETE",
+      headers: signedRequest.headers
+    });
+
+    if (!response.ok && response.status !== 404) {
+      throw await readStorageError(response, "Image deletion failed");
+    }
+  }));
+};
+
 export const uploadsService = {
   async uploadImage(input: UploadImageInput, file?: Express.Multer.File) {
     if (!file) {
@@ -221,7 +293,7 @@ export const uploadsService = {
     const objectKey = buildObjectKey(input.folder, file);
 
     try {
-      await uploadBuffer(config, objectKey, file);
+      await uploadImageSet(config, objectKey, file);
     } catch (error) {
       throw toStorageError(error, "Image upload failed");
     }
@@ -246,25 +318,11 @@ export const uploadsService = {
     }
   },
 
-  async deleteImage(input: DeleteImageInput) {
+  async deleteImageByPublicId(publicId: string) {
     const config = assertMinioConfigured();
 
     try {
-      const signedRequest = signS3Request({
-        config,
-        method: "DELETE",
-        objectKey: input.publicId,
-        payloadHash: hash("")
-      });
-
-      const response = await fetch(signedRequest.url, {
-        method: "DELETE",
-        headers: signedRequest.headers
-      });
-
-      if (!response.ok && response.status !== 404) {
-        throw await readStorageError(response, "Image deletion failed");
-      }
+      await deleteImageSet(config, publicId);
     } catch (error) {
       throw toStorageError(error, "Image deletion failed");
     }
@@ -272,5 +330,9 @@ export const uploadsService = {
     return {
       deleted: true
     };
+  },
+
+  async deleteImage(input: DeleteImageInput) {
+    return this.deleteImageByPublicId(input.publicId);
   }
 };

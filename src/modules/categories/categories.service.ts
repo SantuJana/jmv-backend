@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/utils/app-error";
+import { deleteReplacedImage } from "@/utils/image-cleanup";
 import { buildImageUrls, buildObjectStorageImageUrl } from "@/utils/object-storage-image";
 import { normalizePagination } from "@/utils/pagination";
 
@@ -125,6 +126,13 @@ export const categoriesService = {
       imagePublicId: input.imagePublicId,
       isActive: input.isActive
     });
+
+    if (Object.prototype.hasOwnProperty.call(input, "imagePublicId")) {
+      await deleteReplacedImage({
+        previousPublicId: category.imagePublicId,
+        nextPublicId: input.imagePublicId
+      });
+    }
 
     return toCategoryResponse(updatedCategory);
   },

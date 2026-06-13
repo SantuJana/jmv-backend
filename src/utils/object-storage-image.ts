@@ -15,6 +15,19 @@ export const buildProxyImageUrl = (objectKey: string) => {
   return `${apiBaseUrl}${apiPrefix}/uploads/image/${encodedObjectKey}`;
 };
 
+export const buildImageVariantKey = (
+  objectKey: string,
+  variant: "card" | "detail" | "thumbnail"
+) => {
+  const extensionIndex = objectKey.lastIndexOf(".");
+
+  if (extensionIndex <= 0) {
+    return `${objectKey}-${variant}.webp`;
+  }
+
+  return `${objectKey.slice(0, extensionIndex)}-${variant}.webp`;
+};
+
 const getLegacyImageExtension = (imageUrl: string | null) => {
   if (!imageUrl) {
     return "";
@@ -48,11 +61,18 @@ export const buildObjectStorageImageUrl = (imageUrl: string | null, imagePublicI
 
 export const buildImageUrls = (imageUrl: string | null, imagePublicId?: string | null) => {
   const publicImageUrl = buildObjectStorageImageUrl(imageUrl, imagePublicId);
+  const hasOptimizedVariants = Boolean(imagePublicId?.includes("."));
 
   return {
     original: publicImageUrl,
-    thumbnail: publicImageUrl,
-    card: publicImageUrl,
-    detail: publicImageUrl
+    thumbnail: hasOptimizedVariants && imagePublicId
+      ? buildProxyImageUrl(buildImageVariantKey(imagePublicId, "thumbnail"))
+      : publicImageUrl,
+    card: hasOptimizedVariants && imagePublicId
+      ? buildProxyImageUrl(buildImageVariantKey(imagePublicId, "card"))
+      : publicImageUrl,
+    detail: hasOptimizedVariants && imagePublicId
+      ? buildProxyImageUrl(buildImageVariantKey(imagePublicId, "detail"))
+      : publicImageUrl
   };
 };
