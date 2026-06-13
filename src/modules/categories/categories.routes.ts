@@ -125,7 +125,7 @@ categoriesRouter.get("/:idOrSlug", validate(getCategorySchema), categoriesContro
  *               imageUrl:
  *                 type: string
  *                 format: uri
- *                 example: https://res.cloudinary.com/demo/image/upload/fruits.jpg
+ *                 example: https://storage.example.com/jmv/jmv/categories/fruits.jpg
  *               imagePublicId:
  *                 type: string
  *                 example: categories/fruits

@@ -1,72 +1,215 @@
-import { v2 as cloudinary } from "cloudinary";
+import { createHash, createHmac, randomUUID } from "crypto";
+import path from "path";
 
 import { env } from "@/config/env";
 import { AppError } from "@/utils/app-error";
+import { buildProxyImageUrl } from "@/utils/object-storage-image";
 
 import type { DeleteImageInput, UploadImageInput } from "./uploads.validation";
 
-let isCloudinaryConfigured = false;
+type MinioConfig = {
+  endpoint: URL;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+};
 
-const toCloudinaryError = (error: unknown, fallbackMessage: string) => {
+const toStorageError = (error: unknown, fallbackMessage: string) => {
   if (error instanceof AppError) {
     return error;
   }
 
-  if (typeof error === "object" && error && "http_code" in error) {
-    const cloudinaryError = error as { http_code?: number; message?: string };
-    const statusCode = cloudinaryError.http_code && cloudinaryError.http_code >= 400 ? cloudinaryError.http_code : 502;
-
-    return new AppError(cloudinaryError.message ?? fallbackMessage, statusCode);
+  if (error instanceof Error) {
+    return new AppError(error.message || fallbackMessage, 502);
   }
 
   return new AppError(fallbackMessage, 502);
 };
 
-const configureCloudinary = () => {
-  if (isCloudinaryConfigured) {
-    return;
+const assertMinioConfigured = (): MinioConfig => {
+  const bucket = env.MINIO_BUCKET?.trim();
+  const accessKey = env.MINIO_ACCESS_KEY?.trim();
+  const secretKey = env.MINIO_SECRET_KEY?.trim();
+
+  if (!env.MINIO_ENDPOINT || !bucket || !accessKey || !secretKey) {
+    throw new AppError("MinIO object storage is not configured", 503);
   }
 
-  if (!env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET) {
-    throw new AppError("Cloudinary is not configured", 503);
-  }
-
-  cloudinary.config({
-    cloud_name: env.CLOUDINARY_CLOUD_NAME.trim(),
-    api_key: env.CLOUDINARY_API_KEY.trim(),
-    api_secret: env.CLOUDINARY_API_SECRET.trim()
-  });
-
-  isCloudinaryConfigured = true;
+  return {
+    endpoint: new URL(env.MINIO_ENDPOINT),
+    region: env.MINIO_REGION,
+    bucket,
+    accessKey,
+    secretKey
+  };
 };
 
-const uploadBuffer = (buffer: Buffer, folder: string) =>
-  new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: "image"
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
-        if (!result) {
-          reject(new AppError("Image upload failed", 502));
-          return;
-        }
+const hmac = (key: string | Buffer, value: string) => createHmac("sha256", key).update(value).digest();
 
-        resolve({
-          secure_url: result.secure_url,
-          public_id: result.public_id
-        });
-      }
-    );
+const hmacHex = (key: string | Buffer, value: string) => createHmac("sha256", key).update(value).digest("hex");
 
-    stream.end(buffer);
+const toAmzDate = (date: Date) => date.toISOString().replace(/[:-]|\.\d{3}/g, "");
+
+const encodePathSegment = (segment: string) => encodeURIComponent(segment).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+
+const toObjectPath = (bucket: string, objectKey: string) =>
+  `/${[bucket, ...objectKey.split("/")].map(encodePathSegment).join("/")}`;
+
+const trimSlashes = (value: string) => value.replace(/^\/+|\/+$/g, "");
+
+const normalizeFolder = (folder: string) =>
+  trimSlashes(folder)
+    .split("/")
+    .map((segment) => segment.replace(/[^a-zA-Z0-9_-]/g, "-"))
+    .filter(Boolean)
+    .join("/");
+
+const getFileExtension = (file: Express.Multer.File) => {
+  const originalExtension = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, "");
+
+  if (originalExtension) {
+    return originalExtension;
+  }
+
+  const mimeExtensions: Record<string, string> = {
+    "image/gif": ".gif",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp"
+  };
+
+  return mimeExtensions[file.mimetype] ?? "";
+};
+
+const buildObjectKey = (folder: string, file: Express.Multer.File) => {
+  const safeFolder = normalizeFolder(folder);
+  const baseName = path
+    .basename(file.originalname, path.extname(file.originalname))
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  const fileName = `${Date.now()}-${randomUUID()}${baseName ? `-${baseName}` : ""}${getFileExtension(file)}`;
+
+  return safeFolder ? `${safeFolder}/${fileName}` : fileName;
+};
+
+const getSigningKey = (secretKey: string, dateStamp: string, region: string) => {
+  const dateKey = hmac(`AWS4${secretKey}`, dateStamp);
+  const regionKey = hmac(dateKey, region);
+  const serviceKey = hmac(regionKey, "s3");
+
+  return hmac(serviceKey, "aws4_request");
+};
+
+const signS3Request = ({
+  config,
+  method,
+  objectKey,
+  contentType,
+  payloadHash
+}: {
+  config: MinioConfig;
+  method: "DELETE" | "GET" | "PUT";
+  objectKey: string;
+  contentType?: string;
+  payloadHash: string;
+}) => {
+  const now = new Date();
+  const amzDate = toAmzDate(now);
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const url = new URL(config.endpoint.toString());
+
+  url.pathname = toObjectPath(config.bucket, objectKey);
+  url.search = "";
+
+  const headers: Record<string, string> = {
+    host: url.host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate
+  };
+
+  if (contentType) {
+    headers["content-type"] = contentType;
+  }
+
+  const signedHeaderNames = Object.keys(headers).sort();
+  const canonicalHeaders = signedHeaderNames.map((headerName) => `${headerName}:${headers[headerName] ?? ""}\n`).join("");
+  const signedHeaders = signedHeaderNames.join(";");
+  const canonicalRequest = [method, url.pathname, "", canonicalHeaders, signedHeaders, payloadHash].join("\n");
+  const stringToSign = ["AWS4-HMAC-SHA256", amzDate, credentialScope, hash(canonicalRequest)].join("\n");
+  const signature = hmacHex(getSigningKey(config.secretKey, dateStamp, config.region), stringToSign);
+
+  return {
+    url,
+    headers: {
+      ...Object.fromEntries(Object.entries(headers).filter(([headerName]) => headerName !== "host")),
+      authorization: `AWS4-HMAC-SHA256 Credential=${config.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+    }
+  };
+};
+
+const readStorageError = async (response: Response, fallbackMessage: string) => {
+  const detail = await response.text().catch(() => "");
+  const errorCode = detail.match(/<Code>([^<]+)<\/Code>/)?.[1];
+  const errorMessage = detail.match(/<Message>([^<]+)<\/Message>/)?.[1];
+
+  if (errorCode === "NoSuchBucket") {
+    return new AppError(`MinIO bucket not found: ${assertMinioConfigured().bucket}`, 503, detail || undefined);
+  }
+
+  return new AppError(errorMessage ?? fallbackMessage, response.status >= 500 ? response.status : 502, detail || undefined);
+};
+
+const uploadBuffer = async (config: MinioConfig, objectKey: string, file: Express.Multer.File) => {
+  const signedRequest = signS3Request({
+    config,
+    method: "PUT",
+    objectKey,
+    contentType: file.mimetype,
+    payloadHash: hash(file.buffer)
   });
+
+  const response = await fetch(signedRequest.url, {
+    method: "PUT",
+    headers: signedRequest.headers,
+    body: file.buffer
+  });
+
+  if (!response.ok) {
+    throw await readStorageError(response, "Image upload failed");
+  }
+};
+
+const fetchObject = async (config: MinioConfig, objectKey: string) => {
+  const signedRequest = signS3Request({
+    config,
+    method: "GET",
+    objectKey,
+    payloadHash: hash("")
+  });
+
+  const response = await fetch(signedRequest.url, {
+    method: "GET",
+    headers: signedRequest.headers
+  });
+
+  if (!response.ok) {
+    throw await readStorageError(response, "Image could not be loaded");
+  }
+
+  return {
+    body: Buffer.from(await response.arrayBuffer()),
+    contentType: response.headers.get("content-type") ?? "application/octet-stream",
+    contentLength: response.headers.get("content-length"),
+    etag: response.headers.get("etag"),
+    lastModified: response.headers.get("last-modified")
+  };
+};
 
 export const uploadsService = {
   async uploadImage(input: UploadImageInput, file?: Express.Multer.File) {
@@ -74,37 +217,56 @@ export const uploadsService = {
       throw new AppError("Image file is required", 422);
     }
 
-    configureCloudinary();
-
-    let uploadedImage: Awaited<ReturnType<typeof uploadBuffer>>;
+    const config = assertMinioConfigured();
+    const objectKey = buildObjectKey(input.folder, file);
 
     try {
-      uploadedImage = await uploadBuffer(file.buffer, input.folder);
+      await uploadBuffer(config, objectKey, file);
     } catch (error) {
-      throw toCloudinaryError(error, "Image upload failed");
+      throw toStorageError(error, "Image upload failed");
     }
 
     return {
-      imageUrl: uploadedImage.secure_url,
-      imagePublicId: uploadedImage.public_id
+      imageUrl: buildProxyImageUrl(objectKey),
+      imagePublicId: objectKey
     };
   },
 
-  async deleteImage(input: DeleteImageInput) {
-    configureCloudinary();
-
-    let result: Awaited<ReturnType<typeof cloudinary.uploader.destroy>>;
-
-    try {
-      result = await cloudinary.uploader.destroy(input.publicId, {
-        resource_type: "image"
-      });
-    } catch (error) {
-      throw toCloudinaryError(error, "Image deletion failed");
+  async getImage(objectKey: string) {
+    if (!objectKey.trim()) {
+      throw new AppError("Image key is required", 422);
     }
 
-    if (result.result !== "ok" && result.result !== "not found") {
-      throw new AppError("Image deletion failed", 502, result);
+    const config = assertMinioConfigured();
+
+    try {
+      return await fetchObject(config, objectKey);
+    } catch (error) {
+      throw toStorageError(error, "Image could not be loaded");
+    }
+  },
+
+  async deleteImage(input: DeleteImageInput) {
+    const config = assertMinioConfigured();
+
+    try {
+      const signedRequest = signS3Request({
+        config,
+        method: "DELETE",
+        objectKey: input.publicId,
+        payloadHash: hash("")
+      });
+
+      const response = await fetch(signedRequest.url, {
+        method: "DELETE",
+        headers: signedRequest.headers
+      });
+
+      if (!response.ok && response.status !== 404) {
+        throw await readStorageError(response, "Image deletion failed");
+      }
+    } catch (error) {
+      throw toStorageError(error, "Image deletion failed");
     }
 
     return {

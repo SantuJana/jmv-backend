@@ -200,7 +200,7 @@ const options = {
             imageUrl: {
               type: "string",
               nullable: true,
-              example: "https://res.cloudinary.com/demo/image/upload/fruits.jpg"
+              example: "https://storage.example.com/jmv/jmv/categories/fruits.jpg"
             },
             imagePublicId: {
               type: "string",
@@ -249,7 +249,7 @@ const options = {
             imageUrl: {
               type: "string",
               nullable: true,
-              example: "https://res.cloudinary.com/demo/image/upload/banner.jpg"
+              example: "https://storage.example.com/jmv/jmv/banners/fresh-deals.jpg"
             },
             imagePublicId: {
               type: "string",
@@ -380,7 +380,7 @@ const options = {
             imageUrl: {
               type: "string",
               nullable: true,
-              example: "https://res.cloudinary.com/demo/image/upload/apple.jpg"
+              example: "https://storage.example.com/jmv/jmv/products/apple.jpg"
             },
             imagePublicId: {
               type: "string",
@@ -438,7 +438,7 @@ const options = {
           properties: {
             imageUrl: {
               type: "string",
-              example: "https://res.cloudinary.com/demo/image/upload/v123/jmv/products/apple.jpg"
+              example: "https://storage.example.com/jmv/jmv/products/apple.jpg"
             },
             imagePublicId: {
               type: "string",
